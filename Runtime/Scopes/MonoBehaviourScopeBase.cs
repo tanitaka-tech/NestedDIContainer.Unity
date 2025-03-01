@@ -1,16 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Triggers;
 using TanitakaTech.NestedDIContainer;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using IInjectable = TanitakaTech.NestedDIContainer.IInjectable;
 
 namespace NestedDIContainer.Unity.Runtime.Core
 {
     [DefaultExecutionOrder(-5000)]
-    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IInjectable
+    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IInjectable, IChildSceneScopeLoader
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
@@ -153,6 +156,31 @@ namespace NestedDIContainer.Unity.Runtime.Core
                     InjectOrInitializeChildrenRecursive(child);
                 }
             }
+        }
+
+        // ISceneLoader implementation -----
+        void ISceneScopeLoader.LoadScene<TConfig>(Action loadSceneAction, TConfig config = null) where TConfig : class
+        {
+            ProjectScope.PushConfig(config);
+            loadSceneAction();
+        }
+
+        async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
+        {
+            ProjectScope.PushConfig(config);
+            await loadSceneFunc(cancellationToken);
+        }
+
+        async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
+        {
+            ProjectScope.PushConfig(config);
+            await SceneManager.LoadSceneAsync(sceneName, loadSceneMode).ToUniTask(cancellationToken: cancellationToken);
+        }
+
+        void ISceneScopeLoader.LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class
+        {
+            ProjectScope.PushConfig(config);
+            SceneManager.LoadScene(sceneName, loadSceneMode);
         }
     }
 }

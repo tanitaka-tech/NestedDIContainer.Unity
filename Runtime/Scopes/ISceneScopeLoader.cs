@@ -10,7 +10,7 @@ namespace NestedDIContainer.Unity.Runtime
         /// <summary>
         /// Load and inject config a Scene.
         /// </summary>
-        public void LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class;
+        void LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class;
         void LoadScene<TConfig>(Action loadSceneAction, TConfig config = null) where TConfig : class;
 
         /// <summary>

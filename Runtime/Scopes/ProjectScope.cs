@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using NestedDIContainer.Unity.Runtime.Scopes;
 using TanitakaTech.NestedDIContainer;
 using UnityEngine;
 
@@ -28,7 +29,7 @@ namespace NestedDIContainer.Unity.Runtime
             }
             _scope = projectScopeReference.CreateProjectScope();
             _scope.ScopeId = ScopeId.Create();
-            _scope.ConstructScope(_scope.ScopeId, ScopeId.Create());
+            _scope.ConstructScope(_scope.ScopeId, ScopeId.Create(), optionExtendScope: new ProjectScopeDefaultExtendScope(Scope));
             return _scope;
         }
         
