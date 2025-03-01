@@ -12,7 +12,10 @@ Benchmark against Unity3d compatible containers.
 ## Installation ☘️
 
 ### Install via Package Manager
-// TODO:
+```
+https://github.com/tanitaka-tech/NestedDIContainer.Unity
+https://github.com/tanitaka-tech/NestedDIContainer
+```
 
 ### Install via nuget
 1. Run the following:
