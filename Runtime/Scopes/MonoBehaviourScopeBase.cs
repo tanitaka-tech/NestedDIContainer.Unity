@@ -13,7 +13,7 @@ using IInjectable = TanitakaTech.NestedDIContainer.IInjectable;
 namespace NestedDIContainer.Unity.Runtime.Core
 {
     [DefaultExecutionOrder(-5000)]
-    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IInjectable, IChildSceneScopeLoader
+    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IInjectable, IChildSceneScopeLoader, IInjector
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
@@ -48,18 +48,19 @@ namespace NestedDIContainer.Unity.Runtime.Core
         {
             ScopeId = scopeId;
             ParentScopeId = parentScopeId;
+            GlobalProjectScope.Scopes.Add(scopeId, this);
 
             var childBinder = new DependencyBinder(scopeId);
             if (optionExtendScope != null)
             {
-                childBinder.ExtendScope(optionExtendScope);
+                childBinder.ExtendScope(optionExtendScope, this);
             }
             foreach (var extendScope in _extendScopes)
             {
-                childBinder.ExtendScope(extendScope);
+                Inject(extendScope, this);
+                childBinder.ExtendScope(extendScope, this);
             }
 
-            GlobalProjectScope.Scopes.Add(scopeId, this);
             Inject(this, this);
             IScope scope = this;
             scope.Construct(childBinder, config);
@@ -103,7 +104,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
             InjectOrInitializeChildren(this.gameObject);
         }
 
-        private void Inject(object injectableObject, IScope scope)
+        public void Inject(object injectableObject, IScope scope)
         {
             var type = injectableObject.GetType();
             var fields = type.GetFields(MemberBindingFlags);
