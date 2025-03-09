@@ -5,7 +5,6 @@ namespace NestedDIContainer.Unity.Runtime
 {
     public class ProjectScopeReference : ScriptableObject
     {
-        // TODO: Unity6以前ではabstract classに代入できないため、対応予定
         [SerializeField] private ProjectScope _projectScope;
         
         public ProjectScope ProjectScope
