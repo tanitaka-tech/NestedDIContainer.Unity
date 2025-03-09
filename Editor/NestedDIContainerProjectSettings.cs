@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace _Hierarchy.Common.NestedDIContainer.Unity.Editor
+namespace NestedDIContainer.Unity.Editor
 {
     [FilePath("ProjectSettings/TanitakaTech/NestedDIContainerSettings.asset", FilePathAttribute.Location.ProjectFolder)]
     public sealed class NestedDIContainerProjectSettings : ScriptableSingleton<NestedDIContainerProjectSettings>

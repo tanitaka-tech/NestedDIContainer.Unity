@@ -3,7 +3,7 @@ using NestedDIContainer.Unity.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace _Hierarchy.Common.NestedDIContainer.Unity.Editor
+namespace NestedDIContainer.Unity.Editor
 {
     public class NestedDIContainerProjectSettingsProvider : SettingsProvider
     {
