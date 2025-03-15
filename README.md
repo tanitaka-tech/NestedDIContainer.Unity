@@ -2,7 +2,7 @@
 [nuget](https://www.nuget.org/packages/NestedDIContainer/)
 
 ## Pros
-- Supper fast and lightweight
+- Super fast and lightweight
 - Simple and easy to use
 - Minimal GC pressure
 
