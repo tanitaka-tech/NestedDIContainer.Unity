@@ -101,7 +101,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 GlobalProjectScope.Modules.RemoveScope(scopeId);
             });
 
-            InjectOrInitializeChildren(this.gameObject);
+            InjectOrInitializeChildren(this.gameObject.transform);
         }
 
         public void Inject(object injectableObject, IScope scope)
@@ -127,29 +127,33 @@ namespace NestedDIContainer.Unity.Runtime.Core
             }
         }
 
-        private void InjectOrInitializeChildren(GameObject parent)
+        private void InjectOrInitializeChildren(Transform parent)
         {
-            foreach (Transform child in parent.transform)
-            {
-                InjectOrInitializeChildrenRecursive(child);
-            }
+            InjectOrInitializeChildrenRecursive(parent);
             return;
 
             void InjectOrInitializeChildrenRecursive(Transform current)
             {
-                var injectable = current.GetComponent<IInjectable>();
-                if (injectable != null)
+                var injectables = current.GetComponents<IInjectable>();
+                bool needToInjectChildren = true;
+                for (int i = 0; i < injectables.Length; i++)
                 {
-                    var scopeId = ScopeId.Create();
-                    if (injectable is MonoBehaviourScopeBase monoBehaviourScope)
+                    var injectable = injectables[i];
+                    if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
                     {
+                        var scopeId = ScopeId.Create();
                         monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeId);
+                        needToInjectChildren = false;
                         return;
                     }
                     else
                     {
                         Inject(injectableObject: injectable, scope: this);
                     }
+                }
+                if (!needToInjectChildren)
+                {
+                    return;
                 }
 
                 foreach (Transform child in current)
