@@ -13,7 +13,7 @@ using IInjectable = TanitakaTech.NestedDIContainer.IInjectable;
 namespace NestedDIContainer.Unity.Runtime.Core
 {
     [DefaultExecutionOrder(-5000)]
-    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IInjectable, IChildSceneScopeLoader, IInjector
+    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IChildSceneScopeLoader
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
@@ -101,7 +101,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 GlobalProjectScope.Modules.RemoveScope(scopeId);
             });
 
-            InjectOrInitializeChildren(this.gameObject.transform);
+            InjectOrInitializeChildrenRecursive(this.gameObject.transform);
         }
 
         public void Inject(object injectableObject, IScope scope)
@@ -127,39 +127,32 @@ namespace NestedDIContainer.Unity.Runtime.Core
             }
         }
 
-        private void InjectOrInitializeChildren(Transform parent)
+        private void InjectOrInitializeChildrenRecursive(Transform current)
         {
-            InjectOrInitializeChildrenRecursive(parent);
-            return;
-
-            void InjectOrInitializeChildrenRecursive(Transform current)
+            var injectables = current.GetComponents<IInjectable>();
+            bool needToInjectChildren = true;
+            for (int i = 0; i < injectables.Length; i++)
             {
-                var injectables = current.GetComponents<IInjectable>();
-                bool needToInjectChildren = true;
-                for (int i = 0; i < injectables.Length; i++)
+                var injectable = injectables[i];
+                if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
                 {
-                    var injectable = injectables[i];
-                    if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
-                    {
-                        var scopeId = ScopeId.Create();
-                        monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeId);
-                        needToInjectChildren = false;
-                        return;
-                    }
-                    else
-                    {
-                        Inject(injectableObject: injectable, scope: this);
-                    }
+                    var scopeId = ScopeId.Create();
+                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeId);
+                    needToInjectChildren = false;
                 }
-                if (!needToInjectChildren)
+                else
                 {
-                    return;
+                    Inject(injectableObject: injectable, scope: this);
                 }
+            }
+            if (!needToInjectChildren)
+            {
+                return;
+            }
 
-                foreach (Transform child in current)
-                {
-                    InjectOrInitializeChildrenRecursive(child);
-                }
+            foreach (Transform child in current)
+            {
+                InjectOrInitializeChildrenRecursive(child);
             }
         }
 
