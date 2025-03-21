@@ -20,9 +20,6 @@ namespace NestedDIContainer.Unity.Runtime.Core
         public ScopeId ScopeId { get; set; }
         public ScopeId? ParentScopeId { get; set; }
 
-        private const BindingFlags MemberBindingFlags =
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-
         void IScope.Construct(DependencyBinder binder, object config)
         {
             Construct(binder, config);
@@ -53,15 +50,15 @@ namespace NestedDIContainer.Unity.Runtime.Core
             var childBinder = new DependencyBinder(scopeId);
             if (optionExtendScope != null)
             {
-                childBinder.ExtendScope(optionExtendScope, this);
+                childBinder.ExtendScope(optionExtendScope);
             }
             foreach (var extendScope in _extendScopes)
             {
-                Inject(extendScope, this);
-                childBinder.ExtendScope(extendScope, this);
+                GlobalProjectScope.Inject(extendScope, this);
+                childBinder.ExtendScope(extendScope);
             }
 
-            Inject(this, this);
+            GlobalProjectScope.Inject(this, this);
             IScope scope = this;
             scope.Construct(childBinder, config);
 
@@ -104,29 +101,6 @@ namespace NestedDIContainer.Unity.Runtime.Core
             InjectOrInitializeChildrenRecursive(this.gameObject.transform);
         }
 
-        public void Inject(object injectableObject, IScope scope)
-        {
-            var type = injectableObject.GetType();
-            var fields = type.GetFields(MemberBindingFlags);
-            foreach (var field in fields)
-            {
-                var injectAttr = field.GetCustomAttribute<InjectAttribute>();
-                if (injectAttr != null)
-                {
-                    field.SetValue(injectableObject, GlobalProjectScope.Modules.Resolve(field.FieldType, scope));
-                }
-            }
-            var props = type.GetProperties(MemberBindingFlags);
-            foreach (var prop in props)
-            {
-                var injectAttr = prop.GetCustomAttribute<InjectAttribute>();
-                if (injectAttr != null)
-                {
-                    prop.SetValue(injectableObject, GlobalProjectScope.Modules.Resolve(prop.PropertyType, scope));
-                }
-            }
-        }
-
         private void InjectOrInitializeChildrenRecursive(Transform current)
         {
             var injectables = current.GetComponents<IInjectable>();
@@ -142,7 +116,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 }
                 else
                 {
-                    Inject(injectableObject: injectable, scope: this);
+                    GlobalProjectScope.Inject(injectable, this);
                 }
             }
             if (!needToInjectChildren)
