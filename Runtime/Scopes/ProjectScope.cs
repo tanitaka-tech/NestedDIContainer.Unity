@@ -72,7 +72,6 @@ namespace NestedDIContainer.Unity.Runtime
 
         private static void Dispose()
         {
-            GlobalProjectScope.Dispose();
             _projectScope = null;
             _tempConfig = null;
         }

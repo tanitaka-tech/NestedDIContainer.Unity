@@ -16,7 +16,8 @@ namespace NestedDIContainer.Unity.Runtime.Core
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
-        public ScopeId? ParentScopeId => ScopeContainer.ParentScopeId;
+        public ScopeId ScopeId { get; private set; }
+        public ScopeId? ParentScopeId => ScopeContainer.ParentScope.ScopeId;
         public ScopeContainer ScopeContainer { get; set; }
         void IScope.Construct(DependencyBinder binder, object config)
         {
@@ -41,34 +42,34 @@ namespace NestedDIContainer.Unity.Runtime.Core
         
         internal void ConstructScope(ScopeId scopeId, ScopeContainer parentScopeId, object config = null, IExtendScope optionExtendScope = null)
         {
-            ScopeContainer = new ScopeContainer(scopeId, parentScopeId);
-            GlobalProjectScope.Scopes.Add(scopeId, this);
+            ScopeId = scopeId;
+            ScopeContainer = new ScopeContainer(this, parentScopeId);
 
-            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, ScopeContainer);
+            var childBinder = new DependencyBinder(ScopeContainer);
             if (optionExtendScope != null)
             {
                 childBinder.ExtendScope(optionExtendScope);
             }
             foreach (var extendScope in _extendScopes)
             {
-                ScopeContainer.Inject(extendScope, this);
+                ScopeContainer.Inject(extendScope);
                 childBinder.ExtendScope(extendScope);
             }
 
-            ScopeContainer.Inject(this, this);
+            ScopeContainer.Inject(this);
             IScope scope = this;
             scope.Construct(childBinder, config);
 
             var cancellationTokenOnDestroy = this.GetCancellationTokenOnDestroy();
             if (this is IAsyncInitializer asyncInitializer)
             {
-                var parentScope = scope;
+                IScope parentScope = scope;
                 IAsyncInitializer parentAsyncInitializer = null;
                 ProjectScope.Initializers.Add(asyncInitializer);
 
                 while (!parentScope.ParentScopeId.Equals(ProjectScope.Scope.ParentScopeId))
                 {
-                    GlobalProjectScope.Scopes.TryGetValue(parentScope.ParentScopeId.Value, out parentScope);
+                    parentScope = ScopeContainer.ParentScope;
                     if (parentScope is IAsyncInitializer parent)
                     {
                         parentAsyncInitializer = parent;
@@ -89,11 +90,6 @@ namespace NestedDIContainer.Unity.Runtime.Core
                     .Forget();
             }
 
-            cancellationTokenOnDestroy.Register(() =>
-            {
-                GlobalProjectScope.Scopes.Remove(scopeId);
-            });
-
             InjectOrInitializeChildrenRecursive(this.gameObject.transform);
         }
 
@@ -112,7 +108,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 }
                 else
                 {
-                    ScopeContainer.Inject(injectable, this);
+                    ScopeContainer.Inject(injectable);
                 }
             }
             if (!needToInjectChildren)
