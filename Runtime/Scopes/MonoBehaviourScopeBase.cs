@@ -47,7 +47,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
             ParentScopeId = parentScopeId;
             GlobalProjectScope.Scopes.Add(scopeId, this);
 
-            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, GlobalProjectScope.Modules);
+            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, GlobalProjectScope.ScopeContainer);
             if (optionExtendScope != null)
             {
                 childBinder.ExtendScope(optionExtendScope);
@@ -95,7 +95,6 @@ namespace NestedDIContainer.Unity.Runtime.Core
             cancellationTokenOnDestroy.Register(() =>
             {
                 GlobalProjectScope.Scopes.Remove(scopeId);
-                GlobalProjectScope.Modules.RemoveScope(scopeId);
             });
 
             InjectOrInitializeChildrenRecursive(this.gameObject.transform);
