@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Triggers;
@@ -19,7 +18,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
 
         public ScopeId ScopeId { get; set; }
         public ScopeId? ParentScopeId { get; set; }
-
+        public ScopeContainer ScopeContainer { get; set; }
         void IScope.Construct(DependencyBinder binder, object config)
         {
             Construct(binder, config);
@@ -29,7 +28,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
         public T Instantiate<T>(T prefab, Transform parent, object config = null) where T : MonoBehaviourScopeBase
         {
             var instance = UnityEngine.Object.Instantiate(prefab, parent);
-            instance.ConstructScope(ScopeId.Create(), ScopeId, config);
+            instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
             return instance;
         }
         
@@ -37,28 +36,28 @@ namespace NestedDIContainer.Unity.Runtime.Core
             where TConfig : class
         {
             var instance = UnityEngine.Object.Instantiate(prefab, parent);
-            instance.ConstructScope(ScopeId.Create(), ScopeId, config);
+            instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
             return instance;
         }
         
-        internal void ConstructScope(ScopeId scopeId, ScopeId parentScopeId, object config = null, IExtendScope optionExtendScope = null)
+        internal void ConstructScope(ScopeId scopeId, ScopeContainer parentScopeId, object config = null, IExtendScope optionExtendScope = null)
         {
             ScopeId = scopeId;
-            ParentScopeId = parentScopeId;
+            ScopeContainer = new ScopeContainer(scopeId, parentScopeId);
             GlobalProjectScope.Scopes.Add(scopeId, this);
 
-            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, GlobalProjectScope.ScopeContainer);
+            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, ScopeContainer);
             if (optionExtendScope != null)
             {
                 childBinder.ExtendScope(optionExtendScope);
             }
             foreach (var extendScope in _extendScopes)
             {
-                GlobalProjectScope.Inject(extendScope, this);
+                ScopeContainer.Inject(extendScope, this);
                 childBinder.ExtendScope(extendScope);
             }
 
-            GlobalProjectScope.Inject(this, this);
+            ScopeContainer.Inject(this, this);
             IScope scope = this;
             scope.Construct(childBinder, config);
 
@@ -110,12 +109,12 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
                 {
                     var scopeId = ScopeId.Create();
-                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeId);
+                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeContainer);
                     needToInjectChildren = false;
                 }
                 else
                 {
-                    GlobalProjectScope.Inject(injectable, this);
+                    ScopeContainer.Inject(injectable, this);
                 }
             }
             if (!needToInjectChildren)

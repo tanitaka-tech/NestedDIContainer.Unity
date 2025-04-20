@@ -22,7 +22,7 @@ namespace NestedDIContainer.Unity.Runtime
                 ? ScopeId.Create()
                 : parentScope;
 
-            ConstructScope(ScopeId, ParentScopeId.Value, ProjectScope.PopConfig(), new SceneScopeDefaultExtendScope(this));
+            ConstructScope(ScopeId, ScopeContainer, ProjectScope.PopConfig(), new SceneScopeDefaultExtendScope(this));
         }
 
         protected override void Construct(DependencyBinder binder, object config) => Construct(binder, (TConfig)config);
