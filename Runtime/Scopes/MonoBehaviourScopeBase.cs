@@ -47,7 +47,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
             ParentScopeId = parentScopeId;
             GlobalProjectScope.Scopes.Add(scopeId, this);
 
-            var childBinder = new DependencyBinder(scopeId);
+            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, GlobalProjectScope.Modules);
             if (optionExtendScope != null)
             {
                 childBinder.ExtendScope(optionExtendScope);
