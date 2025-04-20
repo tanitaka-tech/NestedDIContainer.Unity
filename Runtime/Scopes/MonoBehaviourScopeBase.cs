@@ -16,8 +16,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
-        public ScopeId ScopeId { get; set; }
-        public ScopeId? ParentScopeId { get; set; }
+        public ScopeId? ParentScopeId => ScopeContainer.ParentScopeId;
         public ScopeContainer ScopeContainer { get; set; }
         void IScope.Construct(DependencyBinder binder, object config)
         {
@@ -42,7 +41,6 @@ namespace NestedDIContainer.Unity.Runtime.Core
         
         internal void ConstructScope(ScopeId scopeId, ScopeContainer parentScopeId, object config = null, IExtendScope optionExtendScope = null)
         {
-            ScopeId = scopeId;
             ScopeContainer = new ScopeContainer(scopeId, parentScopeId);
             GlobalProjectScope.Scopes.Add(scopeId, this);
 
@@ -131,28 +129,28 @@ namespace NestedDIContainer.Unity.Runtime.Core
         // ISceneLoader implementation -----
         void ISceneScopeLoader.LoadScene<TConfig>(Action loadSceneAction, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             loadSceneAction();
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             await loadSceneFunc(cancellationToken);
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             await SceneManager.LoadSceneAsync(sceneName, loadSceneMode).ToUniTask(cancellationToken: cancellationToken);
         }
 
         void ISceneScopeLoader.LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             SceneManager.LoadScene(sceneName, loadSceneMode);
         }
