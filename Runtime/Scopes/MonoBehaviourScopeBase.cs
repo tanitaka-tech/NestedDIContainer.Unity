@@ -133,24 +133,28 @@ namespace NestedDIContainer.Unity.Runtime.Core
         // ISceneLoader implementation -----
         void ISceneScopeLoader.LoadScene<TConfig>(Action loadSceneAction, TConfig config = null) where TConfig : class
         {
+            ProjectScope.PushParentId(ScopeId);
             ProjectScope.PushConfig(config);
             loadSceneAction();
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
         {
+            ProjectScope.PushParentId(ScopeId);
             ProjectScope.PushConfig(config);
             await loadSceneFunc(cancellationToken);
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
         {
+            ProjectScope.PushParentId(ScopeId);
             ProjectScope.PushConfig(config);
             await SceneManager.LoadSceneAsync(sceneName, loadSceneMode).ToUniTask(cancellationToken: cancellationToken);
         }
 
         void ISceneScopeLoader.LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class
         {
+            ProjectScope.PushParentId(ScopeId);
             ProjectScope.PushConfig(config);
             SceneManager.LoadScene(sceneName, loadSceneMode);
         }

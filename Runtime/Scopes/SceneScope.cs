@@ -17,8 +17,10 @@ namespace NestedDIContainer.Unity.Runtime
         {
             // Init ScopeId
             ScopeId = ScopeId.Create();
-            var parentScope = ProjectScope.Scope ?? ProjectScope.CreateProjectScope();
-            ParentScopeId = ScopeId.Equals(parentScope.ScopeId) ? ScopeId.Create() : parentScope.ScopeId;
+            var parentScope = ProjectScope.PopParentId() ?? ProjectScope.Scope?.ScopeId ?? ProjectScope.CreateProjectScope().ScopeId;
+            ParentScopeId = ScopeId.Equals(parentScope) 
+                ? ScopeId.Create()
+                : parentScope;
 
             ConstructScope(ScopeId, ParentScopeId.Value, ProjectScope.PopConfig(), new SceneScopeDefaultExtendScope(this));
         }

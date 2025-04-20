@@ -44,6 +44,18 @@ namespace NestedDIContainer.Unity.Runtime
             _tempConfig = config;
         }
         private static object _tempConfig = null;
+
+        internal static ScopeId? PopParentId()
+        {
+           var temp = _tempParentId;
+            _tempParentId = null;
+            return temp;
+        }
+        internal static void PushParentId(ScopeId parentId)
+        {
+            _tempParentId = parentId;
+        }
+        private static ScopeId? _tempParentId = null;
         
         protected void Awake()
         {
