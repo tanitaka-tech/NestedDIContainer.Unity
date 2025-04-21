@@ -17,7 +17,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
         public ScopeId ScopeId { get; private set; }
-        public ScopeId? ParentScopeId => ScopeContainer.ParentScope.ScopeId;
+        public ScopeId? ParentScopeId => ScopeContainer.ParentScope?.ScopeId;
         public ScopeContainer ScopeContainer { get; set; }
         void IScope.Construct(DependencyBinder binder, object config)
         {
