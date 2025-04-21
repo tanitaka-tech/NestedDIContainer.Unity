@@ -15,14 +15,9 @@ namespace NestedDIContainer.Unity.Runtime
     {
         protected void Awake()
         {
-            // Init ScopeId
-            ScopeId = ScopeId.Create();
-            var parentScope = ProjectScope.PopParentId() ?? ProjectScope.Scope?.ScopeId ?? ProjectScope.CreateProjectScope().ScopeId;
-            ParentScopeId = ScopeId.Equals(parentScope) 
-                ? ScopeId.Create()
-                : parentScope;
-
-            ConstructScope(ScopeId, ParentScopeId.Value, ProjectScope.PopConfig(), new SceneScopeDefaultExtendScope(this));
+            // Initialize ScopeId
+            var parentScope = ProjectScope.PopParentScope() ?? ProjectScope.Scope ?? ProjectScope.CreateProjectScope();
+            ConstructScope(ScopeId.Create(), parentScope.ScopeContainer, ProjectScope.PopConfig(), new SceneScopeDefaultExtendScope(this));
         }
 
         protected override void Construct(DependencyBinder binder, object config) => Construct(binder, (TConfig)config);

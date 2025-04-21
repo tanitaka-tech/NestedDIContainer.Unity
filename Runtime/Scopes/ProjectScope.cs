@@ -8,8 +8,8 @@ namespace NestedDIContainer.Unity.Runtime
 {
     public abstract class ProjectScope : MonoBehaviourScope
     {
-        internal static ProjectScope Scope => _scope;
-        private static ProjectScope _scope;
+        internal static ProjectScope Scope => _projectScope;
+        private static ProjectScope _projectScope;
 
         internal static List<IAsyncInitializer> Initializers { get; } = new ();
 
@@ -17,9 +17,9 @@ namespace NestedDIContainer.Unity.Runtime
         {
             Dispose();
 
-            if (_scope != null)
+            if (_projectScope != null)
             {
-                return _scope;
+                return _projectScope;
             }
             var loaded = Resources.Load($"ProjectScopeReference");
             var projectScopeReference = loaded as ProjectScopeReference;
@@ -27,10 +27,9 @@ namespace NestedDIContainer.Unity.Runtime
             {
                 throw new Exception("ProjectScopeReference was not found. Please check the ProjectSettings.");
             }
-            _scope = projectScopeReference.CreateProjectScope();
-            _scope.ScopeId = ScopeId.Create();
-            _scope.ConstructScope(_scope.ScopeId, ScopeId.Create(), optionExtendScope: new ProjectScopeDefaultExtendScope(Scope));
-            return _scope;
+            _projectScope = projectScopeReference.CreateProjectScope();
+            _projectScope.ConstructScope(ScopeId.Create(), null, optionExtendScope: new ProjectScopeDefaultExtendScope(Scope));
+            return _projectScope;
         }
         
         internal static object PopConfig()
@@ -45,21 +44,21 @@ namespace NestedDIContainer.Unity.Runtime
         }
         private static object _tempConfig = null;
 
-        internal static ScopeId? PopParentId()
+        internal static IScope PopParentScope()
         {
            var temp = _tempParentId;
             _tempParentId = null;
             return temp;
         }
-        internal static void PushParentId(ScopeId parentId)
+        internal static void PushParentScope(IScope parentScope)
         {
-            _tempParentId = parentId;
+            _tempParentId = parentScope;
         }
-        private static ScopeId? _tempParentId = null;
+        private static IScope _tempParentId = null;
         
         protected void Awake()
         {
-            _scope = this;
+            _projectScope = this;
 #if UNITY_EDITOR
             if (gameObject.scene.name != "DontDestroyOnLoad")
                 throw new ConstructException("ProjectScope must not be in a scene");
@@ -73,8 +72,7 @@ namespace NestedDIContainer.Unity.Runtime
 
         private static void Dispose()
         {
-            GlobalProjectScope.Dispose();
-            _scope = null;
+            _projectScope = null;
             _tempConfig = null;
         }
     }

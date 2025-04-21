@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Triggers;
@@ -17,9 +16,9 @@ namespace NestedDIContainer.Unity.Runtime.Core
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
-        public ScopeId ScopeId { get; set; }
-        public ScopeId? ParentScopeId { get; set; }
-
+        public ScopeId ScopeId { get; private set; }
+        public ScopeId? ParentScopeId => ScopeContainer.ParentScope.ScopeId;
+        public ScopeContainer ScopeContainer { get; set; }
         void IScope.Construct(DependencyBinder binder, object config)
         {
             Construct(binder, config);
@@ -29,7 +28,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
         public T Instantiate<T>(T prefab, Transform parent, object config = null) where T : MonoBehaviourScopeBase
         {
             var instance = UnityEngine.Object.Instantiate(prefab, parent);
-            instance.ConstructScope(ScopeId.Create(), ScopeId, config);
+            instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
             return instance;
         }
         
@@ -37,41 +36,40 @@ namespace NestedDIContainer.Unity.Runtime.Core
             where TConfig : class
         {
             var instance = UnityEngine.Object.Instantiate(prefab, parent);
-            instance.ConstructScope(ScopeId.Create(), ScopeId, config);
+            instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
             return instance;
         }
         
-        internal void ConstructScope(ScopeId scopeId, ScopeId parentScopeId, object config = null, IExtendScope optionExtendScope = null)
+        internal void ConstructScope(ScopeId scopeId, ScopeContainer parentScopeId, object config = null, IExtendScope optionExtendScope = null)
         {
             ScopeId = scopeId;
-            ParentScopeId = parentScopeId;
-            GlobalProjectScope.Scopes.Add(scopeId, this);
+            ScopeContainer = new ScopeContainer(this, parentScopeId);
 
-            var childBinder = new DependencyBinder(scopeId, GlobalProjectScope.Scopes, GlobalProjectScope.Modules);
+            var childBinder = new DependencyBinder(ScopeContainer);
             if (optionExtendScope != null)
             {
                 childBinder.ExtendScope(optionExtendScope);
             }
             foreach (var extendScope in _extendScopes)
             {
-                GlobalProjectScope.Inject(extendScope, this);
+                ScopeContainer.Inject(extendScope);
                 childBinder.ExtendScope(extendScope);
             }
 
-            GlobalProjectScope.Inject(this, this);
+            ScopeContainer.Inject(this);
             IScope scope = this;
             scope.Construct(childBinder, config);
 
             var cancellationTokenOnDestroy = this.GetCancellationTokenOnDestroy();
             if (this is IAsyncInitializer asyncInitializer)
             {
-                var parentScope = scope;
+                IScope parentScope = scope;
                 IAsyncInitializer parentAsyncInitializer = null;
                 ProjectScope.Initializers.Add(asyncInitializer);
 
                 while (!parentScope.ParentScopeId.Equals(ProjectScope.Scope.ParentScopeId))
                 {
-                    GlobalProjectScope.Scopes.TryGetValue(parentScope.ParentScopeId.Value, out parentScope);
+                    parentScope = ScopeContainer.ParentScope;
                     if (parentScope is IAsyncInitializer parent)
                     {
                         parentAsyncInitializer = parent;
@@ -92,12 +90,6 @@ namespace NestedDIContainer.Unity.Runtime.Core
                     .Forget();
             }
 
-            cancellationTokenOnDestroy.Register(() =>
-            {
-                GlobalProjectScope.Scopes.Remove(scopeId);
-                GlobalProjectScope.Modules.RemoveScope(scopeId);
-            });
-
             InjectOrInitializeChildrenRecursive(this.gameObject.transform);
         }
 
@@ -111,12 +103,12 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
                 {
                     var scopeId = ScopeId.Create();
-                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeId);
+                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeContainer);
                     needToInjectChildren = false;
                 }
                 else
                 {
-                    GlobalProjectScope.Inject(injectable, this);
+                    ScopeContainer.Inject(injectable);
                 }
             }
             if (!needToInjectChildren)
@@ -133,28 +125,28 @@ namespace NestedDIContainer.Unity.Runtime.Core
         // ISceneLoader implementation -----
         void ISceneScopeLoader.LoadScene<TConfig>(Action loadSceneAction, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             loadSceneAction();
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             await loadSceneFunc(cancellationToken);
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync<TConfig>(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             await SceneManager.LoadSceneAsync(sceneName, loadSceneMode).ToUniTask(cancellationToken: cancellationToken);
         }
 
         void ISceneScopeLoader.LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class
         {
-            ProjectScope.PushParentId(ScopeId);
+            ProjectScope.PushParentScope(this);
             ProjectScope.PushConfig(config);
             SceneManager.LoadScene(sceneName, loadSceneMode);
         }

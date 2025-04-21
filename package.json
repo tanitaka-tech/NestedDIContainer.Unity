@@ -1,7 +1,7 @@
 {
     "name": "com.tanitaka-tech.nested-di-container.unity",
-    "displayName": "A simple and lightweight DI container for Unity",
-    "version": "0.0.0",
+    "displayName": "NestedDIContainer.Unity",
+    "version": "0.1.0",
     "unity": "2022.3",
     "author": "tanitaka-tech",
     "description": "",
