@@ -10,8 +10,9 @@ namespace NestedDIContainer.Unity.Runtime
         /// <summary>
         /// Load and inject config a Scene.
         /// </summary>
-        void LoadScene<TConfig>(string sceneName, LoadSceneMode loadSceneMode, TConfig config = null) where TConfig : class;
-        void LoadScene<TConfig>(Action loadSceneAction, TConfig config = null) where TConfig : class;
+        void LoadScene(string sceneName, LoadSceneMode loadSceneMode, object config = null);
+
+        void LoadScene(Action loadSceneAction, object config = null);
 
         /// <summary>
         /// Load and inject config a Scene.
@@ -19,8 +20,8 @@ namespace NestedDIContainer.Unity.Runtime
         /// <remarks>
         /// Note: Calling this method in parallel may result in improper injection of the Configuration.
         /// </remarks>
-        UniTask LoadSceneAsync<TConfig>(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, TConfig config = null) where TConfig : class;
-        public UniTask LoadSceneAsync<TConfig>(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, TConfig config = null) where TConfig : class;
+        UniTask LoadSceneAsync(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, object config = null);
+        UniTask LoadSceneAsync(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, object config = null);
     }
 
     public interface IChildSceneScopeLoader : ISceneScopeLoader {}
