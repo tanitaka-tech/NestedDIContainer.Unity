@@ -17,7 +17,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
         public ScopeId ScopeId { get; private set; }
-        public ScopeId? ParentScopeId => ScopeContainer.ParentScope?.ScopeId;
+        public IScope ParentScope => ScopeContainer.ParentScope;
         public ScopeContainer ScopeContainer { get; set; }
         void IScope.Construct(DependencyBinder binder, object config)
         {
@@ -40,10 +40,10 @@ namespace NestedDIContainer.Unity.Runtime.Core
             return instance;
         }
         
-        internal void ConstructScope(ScopeId scopeId, ScopeContainer parentScopeId, object config = null, IExtendScope optionExtendScope = null)
+        internal void ConstructScope(ScopeId scopeId, ScopeContainer parentScopeContainer, object config = null, IExtendScope optionExtendScope = null)
         {
             ScopeId = scopeId;
-            ScopeContainer = new ScopeContainer(this, parentScopeId);
+            ScopeContainer = new ScopeContainer(this, parentScopeContainer);
 
             var childBinder = new DependencyBinder(ScopeContainer);
             if (optionExtendScope != null)
@@ -67,9 +67,9 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 IAsyncInitializer parentAsyncInitializer = null;
                 ProjectScope.Initializers.Add(asyncInitializer);
 
-                while (!parentScope.ParentScopeId.Equals(ProjectScope.Scope.ParentScopeId))
+                while (parentScope.ParentScope != ProjectScope.Scope.ParentScope)
                 {
-                    parentScope = ScopeContainer.ParentScope;
+                    parentScope = parentScope.ParentScope;
                     if (parentScope is IAsyncInitializer parent)
                     {
                         parentAsyncInitializer = parent;
@@ -103,7 +103,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
                 {
                     var scopeId = ScopeId.Create();
-                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeId: ScopeContainer);
+                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeContainer: ScopeContainer);
                     needToInjectChildren = false;
                 }
                 else
