@@ -25,9 +25,17 @@ namespace NestedDIContainer.Unity.Runtime.Core
         }
         protected abstract void Construct(DependencyBinder binder, object config);
 
-        public T Instantiate<T>(T prefab, Transform parent, object config = null) where T : MonoBehaviourScopeBase
+        public T Instantiate<T>(T prefab, Transform parent, object config = null, Func<T, Transform, T> instantiateFunc = null) where T : MonoBehaviourScopeBase
         {
-            var instance = UnityEngine.Object.Instantiate(prefab, parent);
+            instantiateFunc ??= UnityEngine.Object.Instantiate;
+            var instance = instantiateFunc(prefab, parent);
+            instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
+            return instance;
+        }
+        
+        public async UniTask<T> InstantiateAsync<T>(Func<T, Transform, CancellationToken, UniTask<T>> instantiateFunc, T prefab, Transform parent, CancellationToken cancellationToken, object config = null) where T : MonoBehaviourScopeBase
+        {
+            var instance = await instantiateFunc(prefab, parent, cancellationToken);
             instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
             return instance;
         }
