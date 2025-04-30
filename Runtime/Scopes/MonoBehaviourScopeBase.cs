@@ -25,7 +25,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
         }
         protected abstract void Construct(DependencyBinder binder, object config);
 
-        public T Instantiate<T>(T prefab, Transform parent, object config = null, Func<T, Transform, T> instantiateFunc = null) where T : MonoBehaviour
+        public T Instantiate<T>(T prefab, Transform parent, object config = null, Func<T, Transform, T> instantiateFunc = null) where T : Component
         {
             instantiateFunc ??= UnityEngine.Object.Instantiate;
             var instance = instantiateFunc(prefab, parent);
@@ -33,7 +33,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
             return instance;
         }
         
-        public async UniTask<T> InstantiateAsync<T>(Func<UniTask<T>> instantiateFunc, object config = null) where T : MonoBehaviour
+        public async UniTask<T> InstantiateAsync<T>(Func<UniTask<T>> instantiateFunc, object config = null) where T : Component
         {
             var instance = await instantiateFunc();
             InjectOrInitializeChildrenRecursive(instance.transform);
