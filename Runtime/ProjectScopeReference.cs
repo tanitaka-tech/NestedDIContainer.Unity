@@ -23,10 +23,12 @@ namespace NestedDIContainer.Unity.Runtime
         {
             if (_projectScope == null)
                 throw new Exception("ProjectScope is not set. Please set the ProjectScope in the ProjectScopeReference.");
-            
+
+            bool beforeActive = _projectScope.gameObject.activeSelf;
             _projectScope.gameObject.SetActive(false);
             var instance = Instantiate(_projectScope, null);
             DontDestroyOnLoad(instance);
+            _projectScope.gameObject.SetActive(beforeActive);
             
             instance.gameObject.SetActive(true);
             
