@@ -29,14 +29,28 @@ namespace NestedDIContainer.Unity.Runtime.Core
         {
             instantiateFunc ??= UnityEngine.Object.Instantiate;
             var instance = instantiateFunc(prefab, parent);
-            InjectOrInitializeChildrenRecursive(instance.transform);
+            if (instance is MonoBehaviourScopeBase monoBehaviourScope)
+            {
+                monoBehaviourScope.ConstructScope(ScopeId.Create(), ScopeContainer, config);
+            }
+            else
+            {
+                InjectOrInitializeChildrenRecursive(instance.transform);
+            }
             return instance;
         }
         
         public async UniTask<T> InstantiateAsync<T>(Func<UniTask<T>> instantiateFunc, object config = null) where T : Component
         {
             var instance = await instantiateFunc();
-            InjectOrInitializeChildrenRecursive(instance.transform);
+            if (instance is MonoBehaviourScopeBase monoBehaviourScope)
+            {
+                monoBehaviourScope.ConstructScope(ScopeId.Create(), ScopeContainer, config);
+            }
+            else
+            {
+                InjectOrInitializeChildrenRecursive(instance.transform);
+            }
             return instance;
         }
         
