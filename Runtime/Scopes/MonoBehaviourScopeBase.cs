@@ -88,7 +88,7 @@ namespace NestedDIContainer.Unity.Runtime.Core
                 this.StartAsync()
                     .ContinueWith(async () =>
                     {
-                        if (parentAsyncInitializer != null)
+                        if (parentAsyncInitializer != null && ProjectScope.Initializers.Any(x => x == parentAsyncInitializer))
                         {
                             await UniTask.WaitWhile(() => ProjectScope.Initializers.Any(x => x == parentAsyncInitializer), cancellationToken: cancellationTokenOnDestroy);
                         }
