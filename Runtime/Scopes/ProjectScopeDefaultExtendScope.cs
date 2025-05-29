@@ -4,16 +4,16 @@ namespace NestedDIContainer.Unity.Runtime.Scopes
 {
     public class ProjectScopeDefaultExtendScope : IExtendScope
     {
-        private ISceneScopeLoader SceneScopeLoader { get; }
+        private readonly ISceneScopeLoader _sceneScopeLoader;
 
         public ProjectScopeDefaultExtendScope(ISceneScopeLoader sceneScopeLoader)
         {
-            SceneScopeLoader = sceneScopeLoader;
+            _sceneScopeLoader = sceneScopeLoader;
         }
 
         void IExtendScope.Construct(DependencyBinder binder)
         {
-            binder.Bind<ISceneScopeLoader>(SceneScopeLoader);
+            binder.Bind<ISceneScopeLoader>(_sceneScopeLoader);
         }
     }
 }

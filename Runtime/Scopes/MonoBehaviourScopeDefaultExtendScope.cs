@@ -2,12 +2,12 @@ using TanitakaTech.NestedDIContainer;
 
 namespace NestedDIContainer.Unity.Runtime.Scopes
 {
-    public class SceneScopeDefaultExtendScope : IExtendScope
+    public class MonoBehaviourScopeDefaultExtendScope : IExtendScope
     {
         private readonly IChildSceneScopeLoader _childSceneScopeLoader;
         private readonly IPrefabScopeInstantiator _prefabScopeInstantiator;
 
-        public SceneScopeDefaultExtendScope(IChildSceneScopeLoader childSceneScopeLoader, IPrefabScopeInstantiator prefabScopeInstantiator)
+        public MonoBehaviourScopeDefaultExtendScope(IChildSceneScopeLoader childSceneScopeLoader, IPrefabScopeInstantiator prefabScopeInstantiator)
         {
             _childSceneScopeLoader = childSceneScopeLoader;
             _prefabScopeInstantiator = prefabScopeInstantiator;

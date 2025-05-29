@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Triggers;
+using NestedDIContainer.Unity.Runtime.Scopes;
 using TanitakaTech.NestedDIContainer;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -12,7 +13,7 @@ using IInjectable = TanitakaTech.NestedDIContainer.IInjectable;
 namespace NestedDIContainer.Unity.Runtime.Core
 {
     [DefaultExecutionOrder(-5000)]
-    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IChildSceneScopeLoader
+    public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IChildSceneScopeLoader, IPrefabScopeInstantiator
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
 
@@ -31,7 +32,12 @@ namespace NestedDIContainer.Unity.Runtime.Core
             var instance = instantiateFunc(prefab, parent);
             if (instance is MonoBehaviourScopeBase monoBehaviourScope)
             {
-                monoBehaviourScope.ConstructScope(ScopeId.Create(), ScopeContainer, config);
+                monoBehaviourScope.ConstructScope(
+                    ScopeId.Create(), 
+                    ScopeContainer, 
+                    config,
+                    new MonoBehaviourScopeDefaultExtendScope(monoBehaviourScope, monoBehaviourScope)
+                    );
             }
             else
             {
@@ -45,7 +51,12 @@ namespace NestedDIContainer.Unity.Runtime.Core
             var instance = await instantiateFunc();
             if (instance is MonoBehaviourScopeBase monoBehaviourScope)
             {
-                monoBehaviourScope.ConstructScope(ScopeId.Create(), ScopeContainer, config);
+                monoBehaviourScope.ConstructScope(
+                    ScopeId.Create(),
+                    ScopeContainer,
+                    config,
+                    new MonoBehaviourScopeDefaultExtendScope(monoBehaviourScope, monoBehaviourScope)
+                );
             }
             else
             {
@@ -58,7 +69,12 @@ namespace NestedDIContainer.Unity.Runtime.Core
             where TConfig : class
         {
             var instance = UnityEngine.Object.Instantiate(prefab, parent);
-            instance.ConstructScope(ScopeId.Create(), ScopeContainer, config);
+            instance.ConstructScope(
+                ScopeId.Create(), 
+                ScopeContainer, 
+                config,
+                new MonoBehaviourScopeDefaultExtendScope(instance, instance)
+                );
             return instance;
         }
         
