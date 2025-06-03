@@ -270,6 +270,15 @@ namespace NestedDIContainer.Unity.Runtime.Core
             _childInjectables.Clear();
             UnityEditor.EditorUtility.SetDirty(this);
         }
+
+        private void OnValidate()
+        {
+            if (Application.isPlaying)
+            {
+                return;
+            }
+            CollectChildInjectables();
+        }
 #endif
     }
 }
