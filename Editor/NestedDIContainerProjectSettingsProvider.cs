@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
-using NestedDIContainer.Unity.Runtime;
+using TanitakaTech.NestedDIContainer.Unity.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace NestedDIContainer.Unity.Editor
+namespace TanitakaTech.NestedDIContainer.Unity.Editor
 {
     public class NestedDIContainerProjectSettingsProvider : SettingsProvider
     {

@@ -1,6 +1,6 @@
 using TanitakaTech.NestedDIContainer;
 
-namespace NestedDIContainer.Unity.Runtime.Scopes
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes
 {
     public class MonoBehaviourScopeDefaultExtendScope : IExtendScope
     {

@@ -2,7 +2,8 @@
     "name": "NestedDIContainer.Unity.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:796e16b554e6544abac8c11e5bb51306"
+        "GUID:796e16b554e6544abac8c11e5bb51306",
+        "GUID:364ab973c2c114385b32c51a6a20ab7d"
     ],
     "includePlatforms": [
         "Editor"

@@ -4,22 +4,26 @@ using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Triggers;
-using NestedDIContainer.Unity.Runtime.Scopes;
 using TanitakaTech.NestedDIContainer;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using IInjectable = TanitakaTech.NestedDIContainer.IInjectable;
 
-namespace NestedDIContainer.Unity.Runtime.Core
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
 {
     [DefaultExecutionOrder(-5000)]
     public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IChildSceneScopeLoader, IPrefabScopeInstantiator
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
+#if USE_STATIC_DI_RESOLUTION
+        [SerializeField] protected List<Component> _childInjectables;
+#endif
 
         public ScopeId ScopeId { get; private set; }
         public IScope ParentScope => ScopeContainer.ParentScope;
-        public ScopeContainer ScopeContainer { get; set; }
+        public ScopeContainer ScopeContainer { get; private set; }
+        
         void IScope.Construct(DependencyBinder binder, object config)
         {
             Construct(binder, config);
@@ -133,6 +137,21 @@ namespace NestedDIContainer.Unity.Runtime.Core
 
         private void InjectOrInitializeChildrenRecursive(Transform current)
         {
+#if USE_STATIC_DI_RESOLUTION
+            for (int i = 0; i < _childInjectables.Count; i++)
+            {
+                var injectable = _childInjectables[i];
+                if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
+                {
+                    var scopeId = ScopeId.Create();
+                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeContainer: ScopeContainer);
+                }
+                else
+                {
+                    ScopeContainer.Inject(injectable);
+                }
+            }
+#else
             var injectables = current.GetComponents<IInjectable>();
             bool needToInjectChildren = true;
             for (int i = 0; i < injectables.Length; i++)
@@ -153,11 +172,11 @@ namespace NestedDIContainer.Unity.Runtime.Core
             {
                 return;
             }
-
             foreach (Transform child in current)
             {
                 InjectOrInitializeChildrenRecursive(child);
             }
+#endif
         }
 
         // ISceneLoader implementation -----
@@ -188,5 +207,78 @@ namespace NestedDIContainer.Unity.Runtime.Core
             ProjectScope.PushConfig(config);
             SceneManager.LoadScene(sceneName, loadSceneMode);
         }
+        
+#if USE_STATIC_DI_RESOLUTION && UNITY_EDITOR
+        /// <summary>
+        /// 同じGameObjectと子オブジェクトからIInjectableを実装したMonoBehaviourを収集する
+        /// </summary>
+        [ContextMenu("Collect Child Injectables")]
+        public void CollectChildInjectables()
+        {
+            _childInjectables.Clear();
+
+            // 1. 同じGameObjectの他のIInjectableコンポーネントを収集
+            var sameGameObjectInjectables = gameObject.GetComponents<Component>()
+                .Where(component => component is IInjectable && component != this)
+                .ToList();
+            _childInjectables.AddRange(sameGameObjectInjectables);
+
+            // 2. 子オブジェクトから IInjectable を実装した MonoBehaviour を収集
+            var childInjectables = CollectChildInjectablesRecursive(transform);
+            _childInjectables.AddRange(childInjectables);
+
+            Debug.Log($"Collected {_childInjectables.Count} injectables for {name} (Same GameObject: {sameGameObjectInjectables.Count}, Children: {childInjectables.Count})");
+
+            // エディター時のみDirtyフラグを設定
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+        
+        private List<MonoBehaviour> CollectChildInjectablesRecursive(Transform current)
+        {
+            var result = new List<MonoBehaviour>();
+
+            foreach (Transform child in current)
+            {
+                CollectInjectablesFromChildComponents(child);
+            }
+
+            return result;
+
+            void CollectInjectablesFromChildComponents(Transform child)
+            {
+                // 現在の子オブジェクトの IInjectable を収集
+                var injectables = child.GetComponents<MonoBehaviour>()
+                    .Where(component => component is IInjectable && component != this)
+                    .ToList();
+
+                result.AddRange(injectables);
+
+                // 子の MonoBehaviourScopeBase がない場合のみ、さらに深く探索
+                var childScope = child.GetComponent<MonoBehaviourScopeBase>();
+                if (childScope == null)
+                {
+                    result.AddRange(CollectChildInjectablesRecursive(child));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 全てのInjectableを削除
+        /// </summary>
+        public void ClearChildInjectables()
+        {
+            _childInjectables.Clear();
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        private void OnValidate()
+        {
+            if (Application.isPlaying)
+            {
+                return;
+            }
+            CollectChildInjectables();
+        }
+#endif
     }
 }

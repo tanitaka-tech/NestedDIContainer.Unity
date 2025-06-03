@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace NestedDIContainer.Unity.Runtime
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime
 {
     public class ProjectScopeReference : ScriptableObject
     {

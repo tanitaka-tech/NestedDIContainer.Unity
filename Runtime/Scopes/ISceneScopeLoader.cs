@@ -3,7 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine.SceneManagement;
 
-namespace NestedDIContainer.Unity.Runtime
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime
 {
     public interface ISceneScopeLoader
     {

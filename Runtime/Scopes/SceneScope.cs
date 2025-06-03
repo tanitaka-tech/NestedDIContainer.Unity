@@ -1,8 +1,8 @@
-﻿using NestedDIContainer.Unity.Runtime.Core;
-using NestedDIContainer.Unity.Runtime.Scopes;
-using TanitakaTech.NestedDIContainer;
+﻿using TanitakaTech.NestedDIContainer;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Core;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes;
 
-namespace NestedDIContainer.Unity.Runtime
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime
 {
     public abstract class SceneScope : SceneScopeWithConfig<SceneScope.EmptyConfig>
     {

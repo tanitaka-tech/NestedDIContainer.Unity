@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using NestedDIContainer.Unity.Runtime.Scopes;
 using TanitakaTech.NestedDIContainer;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes;
 using UnityEngine;
 
-namespace NestedDIContainer.Unity.Runtime
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime
 {
     public abstract class ProjectScope : MonoBehaviourScope
     {

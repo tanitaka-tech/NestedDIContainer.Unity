@@ -1,7 +1,7 @@
 ﻿using TanitakaTech.NestedDIContainer;
 using UnityEngine;
 
-namespace NestedDIContainer.Unity.Runtime
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime
 {
     public abstract class ScriptableObjectExtendScope : ScriptableObject, IExtendScope
     {
