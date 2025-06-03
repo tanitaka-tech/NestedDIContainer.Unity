@@ -1,7 +1,7 @@
 #if USE_STATIC_DI_RESOLUTION
 using UnityEngine;
 using UnityEditor;
-using NestedDIContainer.Unity.Runtime.Core;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Core;
 
 namespace TanitakaTech.NestedDIContainer.Unity.Editor
 {

@@ -1,4 +1,4 @@
-using NestedDIContainer.Unity.Runtime;
+using TanitakaTech.NestedDIContainer.Unity.Runtime;
 using UnityEditor;
 using UnityEngine;
 

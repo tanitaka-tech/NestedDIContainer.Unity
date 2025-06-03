@@ -1,4 +1,3 @@
-
 #if USE_STATIC_DI_RESOLUTION && UNITY_EDITOR
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +5,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
-using NestedDIContainer.Unity.Runtime.Core;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Core;
 
 namespace TanitakaTech.NestedDIContainer.Unity.Editor
 {

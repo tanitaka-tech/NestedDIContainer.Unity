@@ -1,7 +1,7 @@
-﻿using NestedDIContainer.Unity.Runtime.Core;
-using TanitakaTech.NestedDIContainer;
+﻿using TanitakaTech.NestedDIContainer;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Core;
 
-namespace NestedDIContainer.Unity.Runtime
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime
 {
     public abstract class MonoBehaviourScope : MonoBehaviourScopeWithConfig<MonoBehaviourScope.EmptyConfig>
     {

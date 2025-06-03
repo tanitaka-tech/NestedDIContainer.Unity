@@ -4,13 +4,13 @@ using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Triggers;
-using NestedDIContainer.Unity.Runtime.Scopes;
 using TanitakaTech.NestedDIContainer;
+using TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using IInjectable = TanitakaTech.NestedDIContainer.IInjectable;
 
-namespace NestedDIContainer.Unity.Runtime.Core
+namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
 {
     [DefaultExecutionOrder(-5000)]
     public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IChildSceneScopeLoader, IPrefabScopeInstantiator
