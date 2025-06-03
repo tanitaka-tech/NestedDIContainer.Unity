@@ -1,3 +1,4 @@
+
 #if USE_STATIC_DI_RESOLUTION && UNITY_EDITOR
 using System.Collections.Generic;
 using System.Linq;
@@ -20,11 +21,323 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
         private bool includePrefabs = true;
         private bool includeScenes = true;
 
-        [MenuItem("Tools/NestedDI/Batch Collect Child Injectables")]
+        [MenuItem("Tools/NestedDI/Open Batch Collect Child Injectables Window")]
         public static void ShowWindow()
         {
             GetWindow<MonoBehaviourScopeBaseBatchProcessor>("Batch Collect Child Injectables");
         }
+
+        [MenuItem("Tools/NestedDI/Auto Collect All Child Injectables")]
+        public static void AutoCollectAllChildInjectables()
+        {
+            BatchCollectAllChildInjectables(includePrefabs: true, includeScenes: true, showProgressBar: true);
+        }
+
+        /// <summary>
+        /// すべてのPrefabとSceneからMonoBehaviourScopeBaseを検索し、CollectChildInjectablesを実行
+        /// </summary>
+        /// <param name="includePrefabs">Prefabを検索対象に含めるか</param>
+        /// <param name="includeScenes">Sceneを検索対象に含めるか</param>
+        /// <param name="showProgressBar">プログレスバーを表示するか</param>
+        /// <returns>処理したMonoBehaviourScopeBaseの数</returns>
+        public static int BatchCollectAllChildInjectables(bool includePrefabs = true, bool includeScenes = true, bool showProgressBar = true)
+        {
+            var foundScopes = new List<MonoBehaviourScopeBase>();
+            var scopeLocations = new Dictionary<MonoBehaviourScopeBase, string>();
+
+            Debug.Log("Starting batch collection of child injectables...");
+
+            try
+            {
+                // 1. 検索フェーズ
+                if (showProgressBar)
+                {
+                    EditorUtility.DisplayProgressBar("Batch Collect Child Injectables", "Searching for MonoBehaviourScopeBase components...", 0f);
+                }
+
+                if (includePrefabs)
+                {
+                    SearchInPrefabsStatic(foundScopes, scopeLocations);
+                }
+
+                if (includeScenes)
+                {
+                    SearchInScenesStatic(foundScopes, scopeLocations);
+                }
+
+                Debug.Log($"Found {foundScopes.Count} MonoBehaviourScopeBase components");
+
+                if (foundScopes.Count == 0)
+                {
+                    Debug.Log("No MonoBehaviourScopeBase components found to process");
+                    return 0;
+                }
+
+                // 2. 処理フェーズ
+                int processedCount = 0;
+                int totalCount = foundScopes.Count;
+
+                for (int i = 0; i < foundScopes.Count; i++)
+                {
+                    var scope = foundScopes[i];
+                    if (scope == null) continue;
+
+                    if (showProgressBar)
+                    {
+                        float progress = (float)i / totalCount;
+                        EditorUtility.DisplayProgressBar("Collecting Child Injectables", 
+                            $"Processing {scope.name}... ({i + 1}/{totalCount})", progress);
+                    }
+
+                    if (CollectChildInjectablesForScopeStatic(scope, scopeLocations))
+                    {
+                        processedCount++;
+                    }
+                }
+
+                // 3. 保存
+                if (showProgressBar)
+                {
+                    EditorUtility.DisplayProgressBar("Batch Collect Child Injectables", "Saving assets...", 1f);
+                }
+
+                AssetDatabase.SaveAssets();
+                EditorUtility.ClearProgressBar();
+
+                Debug.Log($"Successfully processed {processedCount}/{totalCount} MonoBehaviourScopeBase components");
+                return processedCount;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error during batch collection: {e.Message}\n{e.StackTrace}");
+                return 0;
+            }
+            finally
+            {
+                if (showProgressBar)
+                {
+                    EditorUtility.ClearProgressBar();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 特定のパスのアセットのみを対象に処理する
+        /// </summary>
+        /// <param name="assetPaths">対象のアセットパス配列</param>
+        /// <param name="showProgressBar">プログレスバーを表示するか</param>
+        /// <returns>処理したMonoBehaviourScopeBaseの数</returns>
+        public static int BatchCollectChildInjectablesForPaths(string[] assetPaths, bool showProgressBar = true)
+        {
+            var foundScopes = new List<MonoBehaviourScopeBase>();
+            var scopeLocations = new Dictionary<MonoBehaviourScopeBase, string>();
+
+            Debug.Log($"Starting batch collection for {assetPaths.Length} specified paths...");
+
+            try
+            {
+                if (showProgressBar)
+                {
+                    EditorUtility.DisplayProgressBar("Batch Collect Child Injectables", "Searching in specified paths...", 0f);
+                }
+
+                foreach (string path in assetPaths)
+                {
+                    if (IsInPackageFolder(path)) continue;
+
+                    if (path.EndsWith(".prefab"))
+                    {
+                        SearchInSinglePrefab(path, foundScopes, scopeLocations);
+                    }
+                    else if (path.EndsWith(".unity"))
+                    {
+                        SearchInSingleScene(path, foundScopes, scopeLocations);
+                    }
+                }
+
+                return ProcessFoundScopes(foundScopes, scopeLocations, showProgressBar);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error during batch collection for specified paths: {e.Message}");
+                return 0;
+            }
+            finally
+            {
+                if (showProgressBar)
+                {
+                    EditorUtility.ClearProgressBar();
+                }
+            }
+        }
+
+        private static int ProcessFoundScopes(List<MonoBehaviourScopeBase> foundScopes, Dictionary<MonoBehaviourScopeBase, string> scopeLocations, bool showProgressBar)
+        {
+            if (foundScopes.Count == 0) return 0;
+
+            int processedCount = 0;
+            for (int i = 0; i < foundScopes.Count; i++)
+            {
+                var scope = foundScopes[i];
+                if (scope == null) continue;
+
+                if (showProgressBar)
+                {
+                    float progress = (float)i / foundScopes.Count;
+                    EditorUtility.DisplayProgressBar("Collecting Child Injectables", 
+                        $"Processing {scope.name}... ({i + 1}/{foundScopes.Count})", progress);
+                }
+
+                if (CollectChildInjectablesForScopeStatic(scope, scopeLocations))
+                {
+                    processedCount++;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Successfully processed {processedCount}/{foundScopes.Count} MonoBehaviourScopeBase components");
+            return processedCount;
+        }
+
+        private static void SearchInPrefabsStatic(List<MonoBehaviourScopeBase> foundScopes, Dictionary<MonoBehaviourScopeBase, string> scopeLocations)
+        {
+            string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab");
+            
+            foreach (string guid in prefabGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (IsInPackageFolder(path)) continue;
+
+                SearchInSinglePrefab(path, foundScopes, scopeLocations);
+            }
+        }
+
+        private static void SearchInSinglePrefab(string path, List<MonoBehaviourScopeBase> foundScopes, Dictionary<MonoBehaviourScopeBase, string> scopeLocations)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            
+            if (prefab != null)
+            {
+                MonoBehaviourScopeBase[] scopes = prefab.GetComponentsInChildren<MonoBehaviourScopeBase>(true);
+                foreach (var scope in scopes)
+                {
+                    if (!foundScopes.Contains(scope))
+                    {
+                        foundScopes.Add(scope);
+                        scopeLocations[scope] = $"Prefab: {path}";
+                    }
+                }
+            }
+        }
+
+        private static void SearchInScenesStatic(List<MonoBehaviourScopeBase> foundScopes, Dictionary<MonoBehaviourScopeBase, string> scopeLocations)
+        {
+            string[] sceneGuids = AssetDatabase.FindAssets("t:Scene");
+            foreach (string guid in sceneGuids)
+            {
+                string scenePath = AssetDatabase.GUIDToAssetPath(guid);
+                if (IsInPackageFolder(scenePath)) continue;
+
+                SearchInSingleScene(scenePath, foundScopes, scopeLocations);
+            }
+        }
+
+        private static void SearchInSingleScene(string scenePath, List<MonoBehaviourScopeBase> foundScopes, Dictionary<MonoBehaviourScopeBase, string> scopeLocations)
+        {
+            if (string.IsNullOrEmpty(scenePath) || !IsSceneEditable(scenePath)) return;
+
+            Scene originalScene = SceneManager.GetActiveScene();
+            string originalScenePath = originalScene.path;
+
+            try
+            {
+                if (originalScene.path == scenePath && originalScene.IsValid())
+                {
+                    SearchInCurrentSceneStatic(originalScene, scenePath, foundScopes, scopeLocations);
+                    return;
+                }
+
+                Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+                if (scene.IsValid())
+                {
+                    SearchInCurrentSceneStatic(scene, scenePath, foundScopes, scopeLocations);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"Failed to open scene {scenePath}: {e.Message}");
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(originalScenePath) && originalScenePath != scenePath)
+                {
+                    try
+                    {
+                        EditorSceneManager.OpenScene(originalScenePath, OpenSceneMode.Single);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning($"Failed to restore original scene {originalScenePath}: {e.Message}");
+                    }
+                }
+            }
+        }
+
+        private static void SearchInCurrentSceneStatic(Scene scene, string scenePath, List<MonoBehaviourScopeBase> foundScopes, Dictionary<MonoBehaviourScopeBase, string> scopeLocations)
+        {
+            GameObject[] rootObjects = scene.GetRootGameObjects();
+            foreach (var rootObj in rootObjects)
+            {
+                MonoBehaviourScopeBase[] scopes = rootObj.GetComponentsInChildren<MonoBehaviourScopeBase>(true);
+                foreach (var scope in scopes)
+                {
+                    if (!foundScopes.Contains(scope))
+                    {
+                        foundScopes.Add(scope);
+                        scopeLocations[scope] = $"Scene: {scenePath}";
+                    }
+                }
+            }
+        }
+
+        private static bool CollectChildInjectablesForScopeStatic(MonoBehaviourScopeBase scope, Dictionary<MonoBehaviourScopeBase, string> scopeLocations)
+        {
+            if (scope == null) return false;
+
+            string assetPath = AssetDatabase.GetAssetPath(scope);
+            if (IsInPackageFolder(assetPath))
+            {
+                Debug.LogWarning($"Skipping package asset: {scope.name} at {assetPath}");
+                return false;
+            }
+
+            try
+            {
+                scope.CollectChildInjectables();
+                
+                if (PrefabUtility.IsPartOfPrefabAsset(scope))
+                {
+                    EditorUtility.SetDirty(scope);
+                }
+                else if (scope.gameObject.scene.IsValid())
+                {
+                    EditorUtility.SetDirty(scope);
+                    EditorSceneManager.MarkSceneDirty(scope.gameObject.scene);
+                }
+
+                string location = scopeLocations.ContainsKey(scope) ? scopeLocations[scope] : "Unknown";
+                Debug.Log($"Collected child injectables for {scope.name} (Location: {location})");
+                return true;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Failed to collect child injectables for {scope.name}: {e.Message}");
+                return false;
+            }
+        }
+
+        // 既存のUI関連のメソッドは省略（変更なし）
+        // ... OnGUI, SearchAllMonoBehaviourScopeBase, etc.
 
         private void OnGUI()
         {
@@ -116,13 +429,11 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
             scopeSelection.Clear();
             scopeLocations.Clear();
 
-            // Prefabを検索
             if (includePrefabs)
             {
                 SearchInPrefabs();
             }
 
-            // Sceneを検索
             if (includeScenes)
             {
                 SearchInScenes();
@@ -133,140 +444,46 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
 
         private void SearchInPrefabs()
         {
-            string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab");
+            SearchInPrefabsStatic(foundScopes, scopeLocations);
             
-            foreach (string guid in prefabGuids)
+            // UIでの選択状態を設定
+            foreach (var scope in foundScopes)
             {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                
-                // パッケージ内のアセットをスキップ
-                if (IsInPackageFolder(path))
+                if (!scopeSelection.ContainsKey(scope))
                 {
-                    continue;
-                }
-
-                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                
-                if (prefab != null)
-                {
-                    MonoBehaviourScopeBase[] scopes = prefab.GetComponentsInChildren<MonoBehaviourScopeBase>(true);
-                    foreach (var scope in scopes)
-                    {
-                        foundScopes.Add(scope);
-                        scopeSelection[scope] = selectAll;
-                        scopeLocations[scope] = $"Prefab: {path}";
-                    }
+                    scopeSelection[scope] = selectAll;
                 }
             }
         }
 
         private void SearchInScenes()
         {
-            // Assetsフォルダ内のすべてのシーンファイルを検索
-            string[] sceneGuids = AssetDatabase.FindAssets("t:Scene");
-            foreach (string guid in sceneGuids)
+            SearchInScenesStatic(foundScopes, scopeLocations);
+            
+            // UIでの選択状態を設定
+            foreach (var scope in foundScopes)
             {
-                string scenePath = AssetDatabase.GUIDToAssetPath(guid);
-                
-                // パッケージ内のシーンをスキップ
-                if (IsInPackageFolder(scenePath))
+                if (!scopeSelection.ContainsKey(scope))
                 {
-                    Debug.Log($"Skipping package scene: {scenePath}");
-                    continue;
-                }
-
-                SearchInScene(scenePath);
-            }
-        }
-
-        private void SearchInScene(string scenePath)
-        {
-            if (string.IsNullOrEmpty(scenePath)) return;
-
-            // 現在開いているシーンを保存
-            Scene originalScene = SceneManager.GetActiveScene();
-            string originalScenePath = originalScene.path;
-
-            try
-            {
-                // 既に開いているシーンの場合は、シーンを開き直さずに検索
-                if (originalScene.path == scenePath && originalScene.IsValid())
-                {
-                    SearchInCurrentScene(originalScene, scenePath);
-                    return;
-                }
-
-                // シーンを開く前に、読み取り専用かチェック
-                if (!IsSceneEditable(scenePath))
-                {
-                    Debug.Log($"Skipping read-only scene: {scenePath}");
-                    return;
-                }
-
-                // シーンを開く
-                Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-                
-                if (scene.IsValid())
-                {
-                    SearchInCurrentScene(scene, scenePath);
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning($"Failed to open scene {scenePath}: {e.Message}");
-            }
-            finally
-            {
-                // 元のシーンに戻す（異なるシーンを開いた場合のみ）
-                if (!string.IsNullOrEmpty(originalScenePath) && originalScenePath != scenePath)
-                {
-                    try
-                    {
-                        EditorSceneManager.OpenScene(originalScenePath, OpenSceneMode.Single);
-                    }
-                    catch (System.Exception e)
-                    {
-                        Debug.LogWarning($"Failed to restore original scene {originalScenePath}: {e.Message}");
-                    }
+                    scopeSelection[scope] = selectAll;
                 }
             }
         }
 
-        private void SearchInCurrentScene(Scene scene, string scenePath)
+        // 残りのprivateメソッドも同様に既存コードを維持
+        private static bool IsInPackageFolder(string assetPath)
         {
-            // ルートオブジェクトから検索
-            GameObject[] rootObjects = scene.GetRootGameObjects();
-            foreach (var rootObj in rootObjects)
-            {
-                MonoBehaviourScopeBase[] scopes = rootObj.GetComponentsInChildren<MonoBehaviourScopeBase>(true);
-                foreach (var scope in scopes)
-                {
-                    if (!foundScopes.Contains(scope))
-                    {
-                        foundScopes.Add(scope);
-                        scopeSelection[scope] = selectAll;
-                        scopeLocations[scope] = $"Scene: {scenePath}";
-                    }
-                }
-            }
-        }
-
-        private bool IsInPackageFolder(string assetPath)
-        {
-            // パッケージ内のアセットかどうかを判定
             return assetPath.StartsWith("Packages/") || 
                    assetPath.StartsWith("Library/PackageCache/");
         }
 
-        private bool IsSceneEditable(string scenePath)
+        private static bool IsSceneEditable(string scenePath)
         {
-            // シーンが編集可能かどうかを判定
             if (IsInPackageFolder(scenePath))
             {
                 return false;
             }
 
-            // アセットが読み取り専用かチェック
             var assetImporter = AssetImporter.GetAtPath(scenePath);
             return assetImporter != null && assetImporter.importSettingsMissing == false;
         }
@@ -290,68 +507,15 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
                 return;
             }
 
-            int processedCount = 0;
-            int totalCount = selectedScopes.Count;
-
-            try
-            {
-                foreach (var scope in selectedScopes)
-                {
-                    if (scope != null)
-                    {
-                        EditorUtility.DisplayProgressBar("Collecting Child Injectables", 
-                            $"Processing {scope.name}...", 
-                            (float)processedCount / totalCount);
-
-                        CollectChildInjectablesForScope(scope);
-                        processedCount++;
-                    }
-                }
-
-                AssetDatabase.SaveAssets();
-                EditorUtility.DisplayDialog("Complete", 
-                    $"Successfully processed {processedCount} MonoBehaviourScopeBase components!", "OK");
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
+            int processedCount = ProcessFoundScopes(selectedScopes, scopeLocations, true);
+            
+            EditorUtility.DisplayDialog("Complete", 
+                $"Successfully processed {processedCount} MonoBehaviourScopeBase components!", "OK");
         }
 
         private void CollectChildInjectablesForScope(MonoBehaviourScopeBase scope)
         {
-            if (scope == null) return;
-
-            // パッケージ内のアセットは編集不可なのでスキップ
-            string assetPath = AssetDatabase.GetAssetPath(scope);
-            if (IsInPackageFolder(assetPath))
-            {
-                Debug.LogWarning($"Skipping package asset: {scope.name} at {assetPath}");
-                return;
-            }
-
-            try
-            {
-                scope.CollectChildInjectables();
-                
-                // Prefabの場合
-                if (PrefabUtility.IsPartOfPrefabAsset(scope))
-                {
-                    EditorUtility.SetDirty(scope);
-                }
-                // Sceneオブジェクトの場合
-                else if (scope.gameObject.scene.IsValid())
-                {
-                    EditorUtility.SetDirty(scope);
-                    EditorSceneManager.MarkSceneDirty(scope.gameObject.scene);
-                }
-
-                Debug.Log($"Collected child injectables for {scope.name} (Location: {scopeLocations.GetValueOrDefault(scope, "Unknown")})");
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"Failed to collect child injectables for {scope.name}: {e.Message}");
-            }
+            CollectChildInjectablesForScopeStatic(scope, scopeLocations);
         }
     }
 }
