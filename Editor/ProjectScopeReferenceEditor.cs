@@ -2,7 +2,7 @@ using NestedDIContainer.Unity.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace NestedDIContainer.Unity.Editor
+namespace TanitakaTech.NestedDIContainer.Unity.Editor
 {
     [CustomEditor(typeof(ProjectScopeReference))]
     public class ProjectScopeReferenceEditor : UnityEditor.Editor
