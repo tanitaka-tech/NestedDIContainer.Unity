@@ -1,7 +1,7 @@
 {
     "name": "com.tanitaka-tech.nested-di-container.unity",
     "displayName": "NestedDIContainer.Unity",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "unity": "2022.3",
     "author": "tanitaka-tech",
     "description": "",
