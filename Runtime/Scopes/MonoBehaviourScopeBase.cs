@@ -16,10 +16,14 @@ namespace NestedDIContainer.Unity.Runtime.Core
     public abstract class MonoBehaviourScopeBase : MonoBehaviour, IScope, IChildSceneScopeLoader, IPrefabScopeInstantiator
     {
         [SerializeField] protected List<ScriptableObjectExtendScope> _extendScopes;
+#if USE_STATIC_DI_RESOLUTION
+        [SerializeField] protected List<Component> _childInjectables;
+#endif
 
         public ScopeId ScopeId { get; private set; }
         public IScope ParentScope => ScopeContainer.ParentScope;
-        public ScopeContainer ScopeContainer { get; set; }
+        public ScopeContainer ScopeContainer { get; private set; }
+        
         void IScope.Construct(DependencyBinder binder, object config)
         {
             Construct(binder, config);
@@ -133,6 +137,21 @@ namespace NestedDIContainer.Unity.Runtime.Core
 
         private void InjectOrInitializeChildrenRecursive(Transform current)
         {
+#if USE_STATIC_DI_RESOLUTION
+            for (int i = 0; i < _childInjectables.Count; i++)
+            {
+                var injectable = _childInjectables[i];
+                if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
+                {
+                    var scopeId = ScopeId.Create();
+                    monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeContainer: ScopeContainer);
+                }
+                else
+                {
+                    ScopeContainer.Inject(injectable);
+                }
+            }
+#else
             var injectables = current.GetComponents<IInjectable>();
             bool needToInjectChildren = true;
             for (int i = 0; i < injectables.Length; i++)
@@ -153,11 +172,11 @@ namespace NestedDIContainer.Unity.Runtime.Core
             {
                 return;
             }
-
             foreach (Transform child in current)
             {
                 InjectOrInitializeChildrenRecursive(child);
             }
+#endif
         }
 
         // ISceneLoader implementation -----
