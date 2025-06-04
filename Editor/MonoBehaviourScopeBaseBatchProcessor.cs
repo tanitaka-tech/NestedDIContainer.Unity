@@ -134,7 +134,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
             }
         }
 
-        private static int ProcessFoundScopeInfos(List<ScopeInfo> foundScopeInfos, bool showProgressBar)
+           private static int ProcessFoundScopeInfos(List<ScopeInfo> foundScopeInfos, bool showProgressBar)
         {
             if (foundScopeInfos.Count == 0) return 0;
 
@@ -168,6 +168,12 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
             }
             finally
             {
+                // プログレスバーをクリア
+                if (showProgressBar)
+                {
+                    EditorUtility.ClearProgressBar();
+                }
+                
                 // 元のSceneに戻す
                 if (!string.IsNullOrEmpty(originalScenePath))
                 {
@@ -183,7 +189,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
             }
         }
 
-        private static bool CollectChildInjectablesForScopeInfo(ScopeInfo scopeInfo, HashSet<string> processedScenes)
+private static bool CollectChildInjectablesForScopeInfo(ScopeInfo scopeInfo, HashSet<string> processedScenes)
         {
             if (scopeInfo == null) return false;
 
@@ -220,11 +226,52 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
                     return false;
                 }
 
-                return CollectChildInjectablesForScope(scope);
+                return CollectChildInjectablesForScope(scope, scopeInfo.isFromScene);
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"Failed to process scope {scopeInfo.objectName}: {e.Message}");
+                return false;
+            }
+        }
+
+        private static bool CollectChildInjectablesForScope(MonoBehaviourScopeBase scope, bool isFromScene = false)
+        {
+            if (scope == null) return false;
+
+            string assetPath = AssetDatabase.GetAssetPath(scope);
+            if (IsInPackageFolder(assetPath))
+            {
+                Debug.LogWarning($"Skipping package asset: {scope.name} at {assetPath}");
+                return false;
+            }
+
+            try
+            {
+                scope.CollectChildInjectables();
+                
+                if (PrefabUtility.IsPartOfPrefabAsset(scope))
+                {
+                    EditorUtility.SetDirty(scope);
+                }
+                else if (scope.gameObject.scene.IsValid())
+                {
+                    EditorUtility.SetDirty(scope);
+                    EditorSceneManager.MarkSceneDirty(scope.gameObject.scene);
+                    
+                    // Scene内のオブジェクトの場合、即座にSceneを保存してgit差分に反映
+                    if (isFromScene)
+                    {
+                        EditorSceneManager.SaveScene(scope.gameObject.scene);
+                    }
+                }
+
+                Debug.Log($"Collected child injectables for {scope.name}");
+                return true;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Failed to collect child injectables for {scope.name}: {e.Message}");
                 return false;
             }
         }
@@ -345,7 +392,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
             }
         }
 
-        private static void SearchInSingleScene(string scenePath, List<ScopeInfo> foundScopeInfos)
+  private static void SearchInSingleScene(string scenePath, List<ScopeInfo> foundScopeInfos)
         {
             if (string.IsNullOrEmpty(scenePath) || !IsSceneEditable(scenePath)) return;
 
@@ -372,6 +419,12 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
                         MonoBehaviourScopeBase[] scopes = rootObj.GetComponentsInChildren<MonoBehaviourScopeBase>(true);
                         foreach (var scope in scopes)
                         {
+                            // Scene内のPrefabインスタンス内のMonoBehaviourScopeBaseは除外
+                            if (PrefabUtility.IsPartOfPrefabInstance(scope.gameObject))
+                            {
+                                continue;
+                            }
+
                             var scopeInfo = new ScopeInfo
                             {
                                 scenePath = scenePath,
@@ -530,10 +583,18 @@ namespace TanitakaTech.NestedDIContainer.Unity.Editor
                 return;
             }
 
-            int processedCount = ProcessFoundScopeInfos(selectedScopeInfos, true);
-            
-            EditorUtility.DisplayDialog("Complete", 
-                $"Successfully processed {processedCount} MonoBehaviourScopeBase components!", "OK");
+            try
+            {
+                int processedCount = ProcessFoundScopeInfos(selectedScopeInfos, true);
+                
+                EditorUtility.DisplayDialog("Complete", 
+                    $"Successfully processed {processedCount} MonoBehaviourScopeBase components!", "OK");
+            }
+            finally
+            {
+                // 念のため再度プログレスバーをクリア
+                EditorUtility.ClearProgressBar();
+            }
         }
 
         private static bool IsInPackageFolder(string assetPath)
