@@ -45,7 +45,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             }
             else
             {
-                InjectOrInitializeChildrenRecursive(instance.transform);
+                DynamicInjectOrInitializeChildrenRecursive(instance.transform);
             }
             return instance;
         }
@@ -64,7 +64,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             }
             else
             {
-                InjectOrInitializeChildrenRecursive(instance.transform);
+                DynamicInjectOrInitializeChildrenRecursive(instance.transform);
             }
             return instance;
         }
@@ -141,7 +141,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             for (int i = 0; i < _childInjectables.Count; i++)
             {
                 var injectable = _childInjectables[i];
-                if (injectable is MonoBehaviourScopeBase monoBehaviourScope && monoBehaviourScope != this)
+                if (injectable is MonoBehaviourScopeBase monoBehaviourScope)
                 {
                     var scopeId = ScopeId.Create();
                     monoBehaviourScope.ConstructScope(scopeId: scopeId, parentScopeContainer: ScopeContainer);
@@ -152,6 +152,12 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
                 }
             }
 #else
+            DynamicInjectOrInitializeChildrenRecursive(current);
+#endif
+        }
+
+        private void DynamicInjectOrInitializeChildrenRecursive(Transform current)
+        {
             var injectables = current.GetComponents<IInjectable>();
             bool needToInjectChildren = true;
             for (int i = 0; i < injectables.Length; i++)
@@ -174,9 +180,8 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             }
             foreach (Transform child in current)
             {
-                InjectOrInitializeChildrenRecursive(child);
+                DynamicInjectOrInitializeChildrenRecursive(child);
             }
-#endif
         }
 
         // ISceneLoader implementation -----
