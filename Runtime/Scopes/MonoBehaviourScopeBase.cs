@@ -141,6 +141,10 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             for (int i = 0; i < _childInjectables.Count; i++)
             {
                 var injectable = _childInjectables[i];
+                if (injectable == null)
+                {
+                    continue;
+                }
                 if (injectable is MonoBehaviourScopeBase monoBehaviourScope)
                 {
                     var scopeId = ScopeId.Create();
