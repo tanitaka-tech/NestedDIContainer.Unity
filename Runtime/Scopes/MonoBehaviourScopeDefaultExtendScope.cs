@@ -1,3 +1,4 @@
+using System.Threading;
 using TanitakaTech.NestedDIContainer;
 
 namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes
@@ -13,7 +14,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes
             _prefabScopeInstantiator = prefabScopeInstantiator;
         }
 
-        void IExtendScope.Construct(DependencyBinder binder)
+        void IExtendScope.Construct(DependencyBinder binder, CancellationToken scopeLifetime)
         {
             binder.Bind<IChildSceneScopeLoader>(_childSceneScopeLoader);
             binder.Bind<IPrefabScopeInstantiator>(_prefabScopeInstantiator);

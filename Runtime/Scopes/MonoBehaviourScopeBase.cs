@@ -94,21 +94,21 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             ScopeContainer = new ScopeContainer(this, parentScopeContainer);
 
             var childBinder = new DependencyBinder(ScopeContainer);
+            var cancellationTokenOnDestroy = this.GetCancellationTokenOnDestroy();
             if (optionExtendScope != null)
             {
-                childBinder.ExtendScope(optionExtendScope);
+                childBinder.ExtendScope(optionExtendScope, cancellationTokenOnDestroy);
             }
             foreach (var extendScope in _extendScopes)
             {
                 ScopeContainer.Inject(extendScope);
-                childBinder.ExtendScope(extendScope);
+                childBinder.ExtendScope(extendScope, cancellationTokenOnDestroy);
             }
 
             ScopeContainer.Inject(this);
             IScope scope = this;
             scope.Construct(childBinder, config);
 
-            var cancellationTokenOnDestroy = this.GetCancellationTokenOnDestroy();
             if (this is IAsyncInitializer asyncInitializer)
             {
                 IScope parentScope = scope;

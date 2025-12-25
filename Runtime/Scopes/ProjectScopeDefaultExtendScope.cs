@@ -1,3 +1,4 @@
+using System.Threading;
 using TanitakaTech.NestedDIContainer;
 
 namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes
@@ -11,7 +12,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Scopes
             _sceneScopeLoader = sceneScopeLoader;
         }
 
-        void IExtendScope.Construct(DependencyBinder binder)
+        void IExtendScope.Construct(DependencyBinder binder, CancellationToken scopeLifetime)
         {
             binder.Bind<ISceneScopeLoader>(_sceneScopeLoader);
         }
