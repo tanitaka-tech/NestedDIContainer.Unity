@@ -93,16 +93,16 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             ScopeId = scopeId;
             ScopeContainer = new ScopeContainer(this, parentScopeContainer);
 
-            var childBinder = new DependencyBinder(ScopeContainer);
             var cancellationTokenOnDestroy = this.GetCancellationTokenOnDestroy();
+            var childBinder = new DependencyBinder(ScopeContainer, cancellationTokenOnDestroy);
             if (optionExtendScope != null)
             {
-                childBinder.ExtendScope(optionExtendScope, cancellationTokenOnDestroy);
+                childBinder.ExtendScope(optionExtendScope);
             }
             foreach (var extendScope in _extendScopes)
             {
                 ScopeContainer.Inject(extendScope);
-                childBinder.ExtendScope(extendScope, cancellationTokenOnDestroy);
+                childBinder.ExtendScope(extendScope);
             }
 
             ScopeContainer.Inject(this);
