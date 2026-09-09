@@ -18,7 +18,9 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime
         /// Load and inject config a Scene.
         /// </summary>
         /// <remarks>
-        /// Note: Calling this method in parallel may result in improper injection of the Configuration.
+        /// Note: Parallel calls are supported as long as the scenes expect different config types.
+        /// Loading scenes that expect the same config type in parallel may still result in
+        /// improper injection of the Configuration.
         /// </remarks>
         UniTask LoadSceneAsync(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, object config = null);
         UniTask LoadSceneAsync(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, object config = null);
