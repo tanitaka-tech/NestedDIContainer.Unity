@@ -197,29 +197,45 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
         // ISceneLoader implementation -----
         void ISceneScopeLoader.LoadScene(Action loadSceneAction, object config = null)
         {
-            ProjectScope.PushParentScope(this);
-            ProjectScope.PushConfig(config);
+            // NOTE: 同期の LoadScene はフレーム終わりに読み込まれ、この呼び出しの中では Awake が走らないため取り下げない
+            ProjectScope.PushPendingSceneScope(this, config);
             loadSceneAction();
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync(Func<CancellationToken, UniTask> loadSceneFunc, CancellationToken cancellationToken, object config = null)
         {
-            ProjectScope.PushParentScope(this);
-            ProjectScope.PushConfig(config);
-            await loadSceneFunc(cancellationToken);
+            var pendingSceneScopeId = ProjectScope.PushPendingSceneScope(this, config);
+            try
+            {
+                await loadSceneFunc(cancellationToken);
+            }
+            catch
+            {
+                // NOTE: 読み込みが中断するとシーンの Awake が走らず、積んだままの config を別のシーンが拾ってしまうため取り下げる
+                ProjectScope.RemovePendingSceneScope(pendingSceneScopeId);
+                throw;
+            }
         }
 
         async UniTask ISceneScopeLoader.LoadSceneAsync(string sceneName, LoadSceneMode loadSceneMode, CancellationToken cancellationToken, object config = null)
         {
-            ProjectScope.PushParentScope(this);
-            ProjectScope.PushConfig(config);
-            await SceneManager.LoadSceneAsync(sceneName, loadSceneMode).ToUniTask(cancellationToken: cancellationToken);
+            var pendingSceneScopeId = ProjectScope.PushPendingSceneScope(this, config);
+            try
+            {
+                await SceneManager.LoadSceneAsync(sceneName, loadSceneMode).ToUniTask(cancellationToken: cancellationToken);
+            }
+            catch
+            {
+                // NOTE: 読み込みが中断するとシーンの Awake が走らず、積んだままの config を別のシーンが拾ってしまうため取り下げる
+                ProjectScope.RemovePendingSceneScope(pendingSceneScopeId);
+                throw;
+            }
         }
 
         void ISceneScopeLoader.LoadScene(string sceneName, LoadSceneMode loadSceneMode, object config = null)
         {
-            ProjectScope.PushParentScope(this);
-            ProjectScope.PushConfig(config);
+            // NOTE: 同期の LoadScene はフレーム終わりに読み込まれ、この呼び出しの中では Awake が走らないため取り下げない
+            ProjectScope.PushPendingSceneScope(this, config);
             SceneManager.LoadScene(sceneName, loadSceneMode);
         }
         

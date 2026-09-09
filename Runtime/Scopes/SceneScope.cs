@@ -16,8 +16,10 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime
         protected void Awake()
         {
             // Initialize ScopeId
-            var parentScope = ProjectScope.PopParentScope() ?? ProjectScope.Scope ?? ProjectScope.CreateProjectScope();
-            ConstructScope(ScopeId.Create(), parentScope.ScopeContainer, ProjectScope.PopConfig(), new SceneScopeDefaultExtendScope(this, this));
+            // NOTE: シーンの読み込みが同時に走っても取り違えないよう、このシーンが期待する config の型で取り出す
+            ProjectScope.TryPopPendingSceneScope(typeof(TConfig), out var pendingParentScope, out var config);
+            var parentScope = pendingParentScope ?? ProjectScope.Scope ?? ProjectScope.CreateProjectScope();
+            ConstructScope(ScopeId.Create(), parentScope.ScopeContainer, config, new SceneScopeDefaultExtendScope(this, this));
         }
 
         protected override void Construct(DependencyBinder binder, object config) => Construct(binder, (TConfig)config);
