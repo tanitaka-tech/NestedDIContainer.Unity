@@ -246,17 +246,34 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
         [ContextMenu("Collect Child Injectables")]
         public void CollectChildInjectables()
         {
-            _childInjectables.Clear();
+            CollectChildInjectables(onlyIfChanged: false);
+        }
 
+        /// <param name="onlyIfChanged">true のときは、集めた結果が今と同じならログも SetDirty もしない</param>
+        private void CollectChildInjectables(bool onlyIfChanged)
+        {
             // 1. 同じGameObjectの他のIInjectableコンポーネントを収集
             var sameGameObjectInjectables = gameObject.GetComponents<Component>()
                 .Where(component => component is IInjectable && component != this)
                 .ToList();
-            _childInjectables.AddRange(sameGameObjectInjectables);
 
             // 2. 子オブジェクトから IInjectable を実装した MonoBehaviour を収集
             var childInjectables = CollectChildInjectablesRecursive(transform);
-            _childInjectables.AddRange(childInjectables);
+
+            var collected = new List<Component>(sameGameObjectInjectables.Count + childInjectables.Count);
+            collected.AddRange(sameGameObjectInjectables);
+            collected.AddRange(childInjectables);
+
+            // NOTE: OnValidate はビルドで Prefab を読み込むたびにも呼ばれる（数千回）。
+            //       変わっていないときにまでログ（スタックトレースの取得が重い）と SetDirty をするとビルドが遅くなる
+            if (onlyIfChanged && _childInjectables != null && _childInjectables.SequenceEqual(collected))
+            {
+                return;
+            }
+
+            _childInjectables ??= new List<Component>();
+            _childInjectables.Clear();
+            _childInjectables.AddRange(collected);
 
             Debug.Log($"Collected {_childInjectables.Count} injectables for {name} (Same GameObject: {sameGameObjectInjectables.Count}, Children: {childInjectables.Count})");
 
@@ -308,7 +325,7 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             {
                 return;
             }
-            CollectChildInjectables();
+            CollectChildInjectables(onlyIfChanged: true);
         }
 #endif
     }
