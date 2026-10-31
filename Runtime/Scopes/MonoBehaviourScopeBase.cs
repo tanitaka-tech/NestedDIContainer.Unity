@@ -113,6 +113,9 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
             {
                 IScope parentScope = scope;
                 IAsyncInitializer parentAsyncInitializer = null;
+                // Start より前に破棄されたスコープは InitializeAsync まで進まず、ここから外れないまま残る（OnDestroy も destroyCancellationToken も来ない）。
+                // 残ると破棄済みのスコープから辿れる画面全体が解放されないので、追加のたびに取り除く
+                ProjectScope.Initializers.RemoveAll(x => x is UnityEngine.Object unityObject && unityObject == null);
                 ProjectScope.Initializers.Add(asyncInitializer);
 
                 while (parentScope.ParentScope != ProjectScope.Scope.ParentScope)
@@ -128,12 +131,19 @@ namespace TanitakaTech.NestedDIContainer.Unity.Runtime.Core
                 this.StartAsync()
                     .ContinueWith(async () =>
                     {
-                        if (parentAsyncInitializer != null && ProjectScope.Initializers.Any(x => x == parentAsyncInitializer))
+                        try
                         {
-                            await UniTask.WaitWhile(() => ProjectScope.Initializers.Any(x => x == parentAsyncInitializer), cancellationToken: cancellationTokenOnDestroy);
+                            if (parentAsyncInitializer != null && ProjectScope.Initializers.Any(x => x == parentAsyncInitializer))
+                            {
+                                await UniTask.WaitWhile(() => ProjectScope.Initializers.Any(x => x == parentAsyncInitializer), cancellationToken: cancellationTokenOnDestroy);
+                            }
+                            await asyncInitializer.InitializeAsync(cancellationTokenOnDestroy);
                         }
-                        await asyncInitializer.InitializeAsync(cancellationTokenOnDestroy);
-                        ProjectScope.Initializers.Remove(asyncInitializer);
+                        finally
+                        {
+                            // キャンセル・例外で抜けたときも外す
+                            ProjectScope.Initializers.Remove(asyncInitializer);
+                        }
                     })
                     .Forget();
             }
